@@ -39,6 +39,16 @@ type StructureDetailRow = {
   created_at: string;
 };
 
+function logSupabaseError(label: string, error: any, meta?: Record<string, any>) {
+  console.error(`[supabase_error] ${label}`, {
+    message: error?.message,
+    code: error?.code,
+    details: error?.details,
+    hint: error?.hint,
+    meta,
+  });
+}
+
 function normalizePoints(points: any): string[] {
   if (!points) return [];
   if (Array.isArray(points)) return points.map(String);
@@ -88,6 +98,8 @@ export default async function VideoDetailPage({ params }: Props) {
     .maybeSingle();
 
   if (error) {
+    logSupabaseError("video_detail:videos_join_core_and_core_tags", error, { videoId });
+
     return (
       <main style={{ padding: 40 }}>
         <Link href="/" style={{ textDecoration: "none" }}>
@@ -147,6 +159,10 @@ export default async function VideoDetailPage({ params }: Props) {
     .order("created_at", { ascending: false })
     .limit(1);
 
+  if (detailError) {
+    logSupabaseError("video_detail:structure_detail_latest", detailError, { videoId });
+  }
+
   const structureDetail = (detailData?.[0] as StructureDetailRow | undefined) ?? null;
 
   // ⑤：観察メモ（複数件）
@@ -156,6 +172,10 @@ export default async function VideoDetailPage({ params }: Props) {
     .eq("video_id", videoId)
     .order("created_at", { ascending: false })
     .limit(10);
+
+  if (notesError) {
+    logSupabaseError("video_detail:observation_notes_latest10", notesError, { videoId });
+  }
 
   const notes = ((notesData ?? []) as ObservationNoteRow[]).map((n) => ({
     ...n,
