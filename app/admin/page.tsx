@@ -12,6 +12,16 @@ function getParam(sp: SearchParams, key: string): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
+function logAdminError(label: string, error: any, meta?: Record<string, any>) {
+  console.error(`[admin_error] ${label}`, {
+    message: error?.message,
+    code: error?.code,
+    details: error?.details,
+    hint: error?.hint,
+    meta,
+  });
+}
+
 async function isAuthed(): Promise<boolean> {
   const adminPassword = process.env.ADMIN_PASSWORD;
 
@@ -92,6 +102,7 @@ async function createVideoAction(formData: FormData) {
     .maybeSingle();
 
   if (error) {
+    logAdminError("createVideoAction:insert_videos", error, { youtube_id, title });
     redirect(`/admin?err=${encodeURIComponent(error.message)}`);
   }
 
@@ -123,7 +134,10 @@ async function createCoreSummaryAction(formData: FormData) {
     hitokoto_summary,
   });
 
-  if (error) redirect(`/admin?err=${encodeURIComponent(error.message)}`);
+  if (error) {
+    logAdminError("createCoreSummaryAction:insert_video_core_summary", error, { video_id });
+    redirect(`/admin?err=${encodeURIComponent(error.message)}`);
+  }
   redirect(`/admin?ok=core_summary_saved&video_id=${encodeURIComponent(video_id)}`);
 }
 
@@ -143,7 +157,10 @@ async function createStructureCoreAction(formData: FormData) {
     emotional_tone: emotional_tone.length ? emotional_tone : null,
   });
 
-  if (error) redirect(`/admin?err=${encodeURIComponent(error.message)}`);
+  if (error) {
+    logAdminError("createStructureCoreAction:insert_video_structure_core", error, { video_id });
+    redirect(`/admin?err=${encodeURIComponent(error.message)}`);
+  }
   redirect(`/admin?ok=structure_core_saved&video_id=${encodeURIComponent(video_id)}`);
 }
 
@@ -168,7 +185,10 @@ async function createStructureDetailAction(formData: FormData) {
     emotional_tone_detail: emotional_tone_detail.length ? emotional_tone_detail : null,
   });
 
-  if (error) redirect(`/admin?err=${encodeURIComponent(error.message)}`);
+  if (error) {
+    logAdminError("createStructureDetailAction:insert_video_structure_detail", error, { video_id });
+    redirect(`/admin?err=${encodeURIComponent(error.message)}`);
+  }
   redirect(`/admin?ok=structure_detail_saved&video_id=${encodeURIComponent(video_id)}`);
 }
 
@@ -191,7 +211,10 @@ async function createObservationNoteAction(formData: FormData) {
     observation_points: points.length ? points : null,
   });
 
-  if (error) redirect(`/admin?err=${encodeURIComponent(error.message)}`);
+  if (error) {
+    logAdminError("createObservationNoteAction:insert_video_observation_notes", error, { video_id });
+    redirect(`/admin?err=${encodeURIComponent(error.message)}`);
+  }
   redirect(`/admin?ok=observation_saved&video_id=${encodeURIComponent(video_id)}`);
 }
 
