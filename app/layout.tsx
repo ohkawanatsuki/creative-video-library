@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { GoogleTagManager } from "@next/third-parties/google";
 import "./globals.css";
 
+const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -25,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID ?? ""} />
+      {gtmId ? <GoogleTagManager gtmId={gtmId} /> : null}
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
       </body>

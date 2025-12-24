@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
 import { VideoCard } from "@/components/VideoCard";
+import { FilterPanel } from "@/components/FilterPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -16,24 +17,13 @@ function getParam(sp: SearchParams, key: string): string | undefined {
 }
 
 function uniqNonEmpty(values: (string | null)[]) {
-  return Array.from(new Set(values.filter((v): v is string => !!v && v.trim().length > 0)));
+  return Array.from(
+    new Set(values.filter((v): v is string => !!v && v.trim().length > 0))
+  );
 }
 
 function hasNull(values: (string | null)[]) {
   return values.some((v) => v === null);
-}
-
-function buildHref(base: URLSearchParams, removeKey?: string) {
-  const p = new URLSearchParams(base);
-  if (removeKey) p.delete(removeKey);
-  const qs = p.toString();
-  return qs ? `/?${qs}` : "/";
-}
-
-function valueLabel(v?: string) {
-  if (!v) return "";
-  if (v === NULL_SENTINEL) return "（未入力）";
-  return v;
 }
 
 type VideoRow = {
@@ -60,12 +50,6 @@ export default async function Home({
   const tone = getParam(sp, "tone"); // emotional_tone
 
   const hasFilter = !!(pvf || vmc || tone);
-
-  // 現在のクエリをURLSearchParamsに（チップの解除リンク生成用）
-  const currentQuery = new URLSearchParams();
-  if (pvf) currentQuery.set("pvf", pvf);
-  if (vmc) currentQuery.set("vmc", vmc);
-  if (tone) currentQuery.set("tone", tone);
 
   // フィルタ候補（structure_coreから集める）
   const { data: coreOptions, error: optErr } = await supabase
@@ -107,19 +91,22 @@ export default async function Home({
 
   // ✅ 未入力（null）も絞り込めるようにする
   if (pvf) {
-    q = pvf === NULL_SENTINEL
-      ? q.is("video_structure_core.product_value_focus", null)
-      : q.eq("video_structure_core.product_value_focus", pvf);
+    q =
+      pvf === NULL_SENTINEL
+        ? q.is("video_structure_core.product_value_focus", null)
+        : q.eq("video_structure_core.product_value_focus", pvf);
   }
   if (vmc) {
-    q = vmc === NULL_SENTINEL
-      ? q.is("video_structure_core.visual_main_character", null)
-      : q.eq("video_structure_core.visual_main_character", vmc);
+    q =
+      vmc === NULL_SENTINEL
+        ? q.is("video_structure_core.visual_main_character", null)
+        : q.eq("video_structure_core.visual_main_character", vmc);
   }
   if (tone) {
-    q = tone === NULL_SENTINEL
-      ? q.is("video_structure_core.emotional_tone", null)
-      : q.eq("video_structure_core.emotional_tone", tone);
+    q =
+      tone === NULL_SENTINEL
+        ? q.is("video_structure_core.emotional_tone", null)
+        : q.eq("video_structure_core.emotional_tone", tone);
   }
 
   const { data, error } = await q;
@@ -143,110 +130,33 @@ export default async function Home({
       <h1>Creative Library（仮）</h1>
       <p>企画・提案のためのクリエイティブ参照ライブラリ。</p>
 
-      {/* フィルタUI（最小 + 未入力対応 + 適用中表示） */}
-      <section
-        style={{
-          marginTop: 16,
-          border: "1px solid #ddd",
-          borderRadius: 10,
-          padding: 12,
-        }}
-      >
-        <div style={{ fontWeight: 700 }}>フィルタ（最小）</div>
-
-        {optErr && (
+      {/* ✅ フィルタUI（Client Component に移管：filter_used を送れる） */}
+      {optErr ? (
+        <section style={{ marginTop: 16 }}>
           <pre style={{ marginTop: 8, color: "red", whiteSpace: "pre-wrap" }}>
             {JSON.stringify(optErr, null, 2)}
           </pre>
-        )}
-
-        {/* ✅ 適用中フィルタ（チップ） */}
-        {hasFilter && (
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 13, opacity: 0.85 }}>適用中：</div>
-
-            <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {pvf && (
-                <a href={buildHref(currentQuery, "pvf")} style={chipStyle}>
-                  商品価値の捉え方：{valueLabel(pvf)} <span style={{ opacity: 0.7 }}>×</span>
-                </a>
-              )}
-              {vmc && (
-                <a href={buildHref(currentQuery, "vmc")} style={chipStyle}>
-                  映像の主役：{valueLabel(vmc)} <span style={{ opacity: 0.7 }}>×</span>
-                </a>
-              )}
-              {tone && (
-                <a href={buildHref(currentQuery, "tone")} style={chipStyle}>
-                  感情トーン：{valueLabel(tone)} <span style={{ opacity: 0.7 }}>×</span>
-                </a>
-              )}
-            </div>
-          </div>
-        )}
-
-        <form method="GET" style={{ marginTop: 10, display: "grid", gap: 10, maxWidth: 700 }}>
-          <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 14 }}>
-              <strong>商品価値の捉え方</strong>
-            </span>
-            <select name="pvf" defaultValue={pvf ?? ""} style={selectStyle}>
-              <option value="">（指定しない）</option>
-              {pvfHasNull && <option value={NULL_SENTINEL}>（未入力）</option>}
-              {pvfOptions.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 14 }}>
-              <strong>映像の主役</strong>
-            </span>
-            <select name="vmc" defaultValue={vmc ?? ""} style={selectStyle}>
-              <option value="">（指定しない）</option>
-              {vmcHasNull && <option value={NULL_SENTINEL}>（未入力）</option>}
-              {vmcOptions.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 14 }}>
-              <strong>感情トーン</strong>
-            </span>
-            <select name="tone" defaultValue={tone ?? ""} style={selectStyle}>
-              <option value="">（指定しない）</option>
-              {toneHasNull && <option value={NULL_SENTINEL}>（未入力）</option>}
-              {toneOptions.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <button type="submit" style={buttonStyle}>
-              絞り込む
-            </button>
-            <a href="/" style={{ fontSize: 14, textDecoration: "none" }}>
-              リセット
-            </a>
-            <span style={{ fontSize: 12, opacity: 0.8 }}>件数：{rows.length}</span>
-          </div>
-        </form>
-      </section>
+        </section>
+      ) : (
+        <FilterPanel
+          pvf={pvf}
+          vmc={vmc}
+          tone={tone}
+          pvfOptions={pvfOptions}
+          vmcOptions={vmcOptions}
+          toneOptions={toneOptions}
+          pvfHasNull={pvfHasNull}
+          vmcHasNull={vmcHasNull}
+          toneHasNull={toneHasNull}
+          rowsCount={rows.length}
+        />
+      )}
 
       {/* 一覧 */}
       <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
         {rows.map((v) => {
-          const hitokotoSummary = v.video_core_summary?.[0]?.hitokoto_summary ?? null;
+          const hitokotoSummary =
+            v.video_core_summary?.[0]?.hitokoto_summary ?? null;
           const core = v.video_structure_core?.[0];
 
           return (
@@ -265,27 +175,3 @@ export default async function Home({
     </main>
   );
 }
-
-const selectStyle: React.CSSProperties = {
-  padding: 10,
-  border: "1px solid #ddd",
-  borderRadius: 8,
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: "10px 14px",
-  border: "1px solid #ddd",
-  borderRadius: 8,
-  cursor: "pointer",
-};
-
-const chipStyle: React.CSSProperties = {
-  display: "inline-flex",
-  gap: 6,
-  alignItems: "center",
-  border: "1px solid #ddd",
-  borderRadius: 999,
-  padding: "6px 10px",
-  textDecoration: "none",
-  fontSize: 13,
-};

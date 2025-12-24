@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { gtmEvent } from "@/lib/gtm";
 
 type Props = {
   id: string;
@@ -20,6 +23,7 @@ export function VideoCard({
   return (
     <Link
       href={`/videos/${id}`}
+      onClick={() => gtmEvent({ event: "open_detail", video_id: id })}
       style={{ textDecoration: "none", color: "inherit" }}
     >
       <article
@@ -53,7 +57,6 @@ export function VideoCard({
           </div>
         </div>
 
-        {/* ✅ 確認用（returnの中に入れる） */}
         <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6 }}>
           id: {id}
         </div>
