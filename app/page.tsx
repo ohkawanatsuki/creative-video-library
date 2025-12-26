@@ -16,6 +16,11 @@ function getParam(sp: SearchParams, key: string): string | undefined {
   return trimmed.length ? trimmed : undefined;
 }
 
+function asArray<T>(v: T | T[] | null | undefined): T[] {
+  if (!v) return [];
+  return Array.isArray(v) ? v : [v];
+}
+
 function uniqNonEmpty(values: (string | null)[]) {
   return Array.from(new Set(values.filter((v): v is string => !!v && v.trim().length > 0)));
 }
@@ -27,12 +32,19 @@ function hasNull(values: (string | null)[]) {
 type VideoRow = {
   id: string;
   title: string | null;
-  video_core_summary?: { hitokoto_summary: string | null }[] | null;
-  video_structure_core?: {
-    product_value_focus: string | null;
-    visual_main_character: string | null;
-    emotional_tone: string | null;
-  }[] | null;
+  video_core_summary?: { hitokoto_summary: string | null }[] | { hitokoto_summary: string | null } | null;
+  video_structure_core?:
+    | {
+        product_value_focus: string | null;
+        visual_main_character: string | null;
+        emotional_tone: string | null;
+      }[]
+    | {
+        product_value_focus: string | null;
+        visual_main_character: string | null;
+        emotional_tone: string | null;
+      }
+    | null;
 };
 
 export default async function Home({
@@ -40,7 +52,7 @@ export default async function Home({
 }: {
   searchParams: SearchParams | Promise<SearchParams>;
 }) {
-  const sp = await Promise.resolve(searchParams as any);
+  const sp = await Promise.resolve(searchParams);
 
   const pvf = getParam(sp, "pvf");
   const vmc = getParam(sp, "vmc");
@@ -48,15 +60,22 @@ export default async function Home({
 
   const hasFilter = !!(pvf || vmc || tone);
 
+  type StructureCoreRow = {
+    product_value_focus: string | null;
+    visual_main_character: string | null;
+    emotional_tone: string | null;
+  };
+
   const { data: coreOptions, error: optErr } = await supabase
     .from("video_structure_core")
     .select("product_value_focus, visual_main_character, emotional_tone")
     .limit(500);
 
-  const list = coreOptions ?? [];
-  const pvfValues = list.map((r: any) => r.product_value_focus as string | null);
-  const vmcValues = list.map((r: any) => r.visual_main_character as string | null);
-  const toneValues = list.map((r: any) => r.emotional_tone as string | null);
+  const list = (coreOptions ?? []) as StructureCoreRow[];
+
+  const pvfValues = list.map((r) => r.product_value_focus);
+  const vmcValues = list.map((r) => r.visual_main_character);
+  const toneValues = list.map((r) => r.emotional_tone);
 
   const pvfOptions = uniqNonEmpty(pvfValues);
   const vmcOptions = uniqNonEmpty(vmcValues);
@@ -167,8 +186,8 @@ export default async function Home({
 
       <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
         {rows.map((v) => {
-          const hitokotoSummary = v.video_core_summary?.[0]?.hitokoto_summary ?? null;
-          const core = v.video_structure_core?.[0];
+          const hitokotoSummary = asArray(v.video_core_summary)[0]?.hitokoto_summary ?? null;
+          const core = asArray(v.video_structure_core)[0];
 
           return (
             <VideoCard

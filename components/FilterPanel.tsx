@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { gtmEvent } from "@/lib/gtm";
 
@@ -35,7 +36,13 @@ function buildHref(base: URLSearchParams, removeKey?: string) {
   return qs ? `/?${qs}` : "/";
 }
 
-export function FilterPanel({
+// ✅ URL(props)が変わったら丸ごと再マウントして state を初期化する
+export function FilterPanel(props: Props) {
+  const resetKey = `${props.pvf ?? ""}|${props.vmc ?? ""}|${props.tone ?? ""}`;
+  return <FilterPanelInner key={resetKey} {...props} />;
+}
+
+function FilterPanelInner({
   pvf,
   vmc,
   tone,
@@ -49,16 +56,19 @@ export function FilterPanel({
 }: Props) {
   const router = useRouter();
 
-  let pvfState = pvf ?? "";
-  let vmcState = vmc ?? "";
-  let toneState = tone ?? "";
+  const [pvfState, setPvfState] = useState(pvf ?? "");
+  const [vmcState, setVmcState] = useState(vmc ?? "");
+  const [toneState, setToneState] = useState(tone ?? "");
 
-  const hasFilter = !!(pvfState || vmcState || toneState);
+  const hasApplied = !!(pvf || vmc || tone);
 
-  const currentQuery = new URLSearchParams();
-  if (pvfState) currentQuery.set("pvf", pvfState);
-  if (vmcState) currentQuery.set("vmc", vmcState);
-  if (toneState) currentQuery.set("tone", toneState);
+  const currentQuery = useMemo(() => {
+    const q = new URLSearchParams();
+    if (pvfState) q.set("pvf", pvfState);
+    if (vmcState) q.set("vmc", vmcState);
+    if (toneState) q.set("tone", toneState);
+    return q;
+  }, [pvfState, vmcState, toneState]);
 
   function pushFilterUrl(next: { pvf?: string; vmc?: string; tone?: string }) {
     const params = new URLSearchParams();
@@ -88,6 +98,11 @@ export function FilterPanel({
   }
 
   function onReset() {
+    // ✅ まずUIを即クリア
+    setPvfState("");
+    setVmcState("");
+    setToneState("");
+
     router.push("/");
     gtmEvent({ event: "filter_used", action: "reset", pvf: null, vmc: null, tone: null });
   }
@@ -97,7 +112,7 @@ export function FilterPanel({
       <div className="filterPanelTitle">条件で探す</div>
       <div className="filterHelp">まずはどれか1つ選んで「絞り込む」を押してみてください。</div>
 
-      {hasFilter && (
+      {hasApplied && (
         <div className="chipsWrap">
           <div className="chipsLabel">適用中：</div>
 
@@ -109,11 +124,8 @@ export function FilterPanel({
                 onClick={(e) => {
                   e.preventDefault();
                   gtmEvent({ event: "filter_used", action: "remove", key: "pvf", value: pvfState });
-                  pushFilterUrl({
-                    pvf: "",
-                    vmc: vmcState || undefined,
-                    tone: toneState || undefined,
-                  });
+                  setPvfState("");
+                  pushFilterUrl({ pvf: "", vmc: vmcState || undefined, tone: toneState || undefined });
                 }}
               >
                 商品価値の捉え方：{valueLabel(pvfState)} <span className="chipX">×</span>
@@ -127,11 +139,8 @@ export function FilterPanel({
                 onClick={(e) => {
                   e.preventDefault();
                   gtmEvent({ event: "filter_used", action: "remove", key: "vmc", value: vmcState });
-                  pushFilterUrl({
-                    pvf: pvfState || undefined,
-                    vmc: "",
-                    tone: toneState || undefined,
-                  });
+                  setVmcState("");
+                  pushFilterUrl({ pvf: pvfState || undefined, vmc: "", tone: toneState || undefined });
                 }}
               >
                 映像の主役：{valueLabel(vmcState)} <span className="chipX">×</span>
@@ -145,11 +154,8 @@ export function FilterPanel({
                 onClick={(e) => {
                   e.preventDefault();
                   gtmEvent({ event: "filter_used", action: "remove", key: "tone", value: toneState });
-                  pushFilterUrl({
-                    pvf: pvfState || undefined,
-                    vmc: vmcState || undefined,
-                    tone: "",
-                  });
+                  setToneState("");
+                  pushFilterUrl({ pvf: pvfState || undefined, vmc: vmcState || undefined, tone: "" });
                 }}
               >
                 感情トーン：{valueLabel(toneState)} <span className="chipX">×</span>
@@ -163,12 +169,7 @@ export function FilterPanel({
         <label className="fieldLabel">
           <strong>商品価値の捉え方</strong>
           <div className="fieldHelp">例：体験・時間 / 機能・性能 / 価格 など</div>
-          <select
-            name="pvf"
-            defaultValue={pvfState}
-            className="select"
-            onChange={(e) => (pvfState = e.target.value)}
-          >
+          <select name="pvf" value={pvfState} className="select" onChange={(e) => setPvfState(e.target.value)}>
             <option value="">（指定しない）</option>
             {pvfHasNull && <option value={NULL_SENTINEL}>（未入力）</option>}
             {pvfOptions.map((v) => (
@@ -182,12 +183,7 @@ export function FilterPanel({
         <label className="fieldLabel">
           <strong>映像の主役</strong>
           <div className="fieldHelp">例：人 / シーン・世界観 / 商品そのもの など</div>
-          <select
-            name="vmc"
-            defaultValue={vmcState}
-            className="select"
-            onChange={(e) => (vmcState = e.target.value)}
-          >
+          <select name="vmc" value={vmcState} className="select" onChange={(e) => setVmcState(e.target.value)}>
             <option value="">（指定しない）</option>
             {vmcHasNull && <option value={NULL_SENTINEL}>（未入力）</option>}
             {vmcOptions.map((v) => (
@@ -201,12 +197,7 @@ export function FilterPanel({
         <label className="fieldLabel">
           <strong>感情トーン</strong>
           <div className="fieldHelp">例：チル / 高揚 / 温かい など</div>
-          <select
-            name="tone"
-            defaultValue={toneState}
-            className="select"
-            onChange={(e) => (toneState = e.target.value)}
-          >
+          <select name="tone" value={toneState} className="select" onChange={(e) => setToneState(e.target.value)}>
             <option value="">（指定しない）</option>
             {toneHasNull && <option value={NULL_SENTINEL}>（未入力）</option>}
             {toneOptions.map((v) => (

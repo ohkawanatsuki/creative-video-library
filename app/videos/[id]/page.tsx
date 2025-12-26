@@ -6,6 +6,46 @@ export const dynamic = "force-dynamic";
 
 type Params = { id: string };
 
+type MaybeArray<T> = T | T[] | null | undefined;
+
+type StructureCoreRow = {
+  product_value_focus: string | null;
+  visual_main_character: string | null;
+  emotional_tone: string | null;
+};
+
+type StructureDetailRow = {
+  product_value_focus_detail: string | null;
+  visual_main_character_detail: string | null;
+  emotional_tone_detail: string | null;
+  appeal_method: string | null;
+  appeal_method_detail: string | null;
+};
+
+type CoreSummaryRow = {
+  hitokoto_summary: string | null;
+};
+
+type ObservationNoteRow = {
+  created_at: string | null;
+  observation_text: string | null;
+  observation_points: unknown; // jsonb
+};
+
+type VideoDetailRow = {
+  id: string;
+  title: string | null;
+  youtube_id: string | null;
+  channel_name: string | null;
+  published_year: number | null;
+  created_at: string | null;
+
+  video_core_summary: MaybeArray<CoreSummaryRow>;
+  video_structure_core: MaybeArray<StructureCoreRow>;
+  video_structure_detail: MaybeArray<StructureDetailRow>;
+  video_observation_notes: MaybeArray<ObservationNoteRow>;
+};
+
 function normalizeText(v: unknown): string | null {
   if (v == null) return null;
   const s = String(v).trim();
@@ -31,15 +71,17 @@ function normalizeBullets(v: unknown): string[] {
   return [];
 }
 
-function pickFirst(obj: any, keys: string[]) {
+function pickFirst(obj: Record<string, unknown> | null | undefined, keys: string[]): unknown {
   for (const k of keys) {
     const v = obj?.[k];
-    if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+    if (v === undefined || v === null) continue;
+    if (typeof v === "string" && v.trim() === "") continue;
+    return v;
   }
   return null;
 }
 
-function pickFirstArray(obj: any, keys: string[]) {
+function pickFirstArray(obj: Record<string, unknown> | null | undefined, keys: string[]): unknown {
   for (const k of keys) {
     const v = obj?.[k];
     if (v === undefined || v === null) continue;
@@ -59,13 +101,18 @@ function formatDateYMD(dateStr?: string | null) {
   return `${y}/${m}/${dd}`;
 }
 
+function asArray<T>(v: MaybeArray<T>): T[] {
+  if (!v) return [];
+  return Array.isArray(v) ? v : [v];
+}
+
 export default async function VideoDetailPage({
   params,
 }: {
   params: Params | Promise<Params>;
 }) {
-  const p = await Promise.resolve(params as any);
-  const id = p.id as string;
+  const p: Params = await Promise.resolve(params);
+  const id = p.id;
 
   const { data: row, error } = await supabase
     .from("videos")
@@ -124,10 +171,10 @@ export default async function VideoDetailPage({
     );
   }
 
-  const v: any = row;
+  const v = row as unknown as VideoDetailRow;
 
   // --- Core（カード用タグ） ---
-  const core = (v.video_structure_core?.[0] ?? null) as any;
+  const core = asArray(v.video_structure_core)[0] ?? null;
 
   const pvf = normalizeText(
     pickFirst(core, ["product_value_focus", "pvf", "productValueFocus"])
@@ -140,7 +187,7 @@ export default async function VideoDetailPage({
   );
 
   // --- Detail（切り口の解説） ---
-  const detail = (v.video_structure_detail?.[0] ?? null) as any;
+  const detail = asArray(v.video_structure_detail)[0] ?? null;
 
   const pvfNote = normalizeText(
     pickFirst(detail, [
@@ -179,10 +226,10 @@ export default async function VideoDetailPage({
   );
 
   // --- Summary（ヒトコト） ---
-  const hitokoto = normalizeText(v.video_core_summary?.[0]?.hitokoto_summary);
+  const hitokoto = normalizeText(asArray(v.video_core_summary)[0]?.hitokoto_summary);
 
   // --- Observation Notes（さらに詳しく） ---
-  const rawNotes = (v.video_observation_notes ?? []) as any[];
+  const rawNotes = asArray(v.video_observation_notes);
   rawNotes.sort((a, b) => {
     const ta = new Date(a?.created_at ?? 0).getTime();
     const tb = new Date(b?.created_at ?? 0).getTime();
@@ -290,12 +337,12 @@ export default async function VideoDetailPage({
             </div>
           </div>
 
-          {/* 上のYouTubeボタン（区切り線なし、マージンで差を出す） */}
+          {/* 上のYouTubeボタン */}
           <div className="detailHeroAction">
             {youtubeId ? (
               <a
                 className="btn btnSecondary btnSmall"
-                href={`https://www.youtube.com/watch?v=${v.youtube_id}`}
+                href={`https://www.youtube.com/watch?v=${v.youtube_id ?? ""}`}
                 target="_blank"
                 rel="noreferrer"
                 data-gtm="youtube_click"
@@ -372,7 +419,7 @@ export default async function VideoDetailPage({
                 <div key={n.key} className="noteRowPlain">
                   {n.bullets.length > 0 && (
                     <ul className="noteBullets">
-                      {n.bullets.map((b: string, i: number) => (
+                      {n.bullets.map((b, i) => (
                         <li key={i}>{b}</li>
                       ))}
                     </ul>
@@ -391,12 +438,12 @@ export default async function VideoDetailPage({
           )}
         </section>
 
-        {/* 下部CV（主導線） */}
+        {/* 下部CV */}
         {youtubeId ? (
           <div className="detailBottomCta">
             <a
               className="btn btnPrimary btnWide"
-              href={`https://www.youtube.com/watch?v=${v.youtube_id}`}
+              href={`https://www.youtube.com/watch?v=${v.youtube_id ?? ""}`}
               target="_blank"
               rel="noreferrer"
               data-gtm="youtube_click"
@@ -428,6 +475,7 @@ export default async function VideoDetailPage({
           </div>
         </details>
       </div>
+
       <Script id="mvp-youtube-click" strategy="afterInteractive">
         {`
         (function () {
