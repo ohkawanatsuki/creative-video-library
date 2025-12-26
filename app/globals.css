@@ -1,24 +1,21 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* ✅ MVP: ライト固定（OS/ブラウザのダークに引っ張られない） */
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ✅ 背景の白抜け対策（高さが足りないときも全体に背景を敷く） */
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  min-height: 100%;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  min-height: 100vh;
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -35,8 +32,1239 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+/* --- MVP UI base (Step B) --- */
+html {
+  color-scheme: light;
+  background: #f7f7f8; /* ✅ html にも背景 */
+}
+
+body {
+  background: #f7f7f8;
+  color: #111827;
+}
+
+/* 共通コンテナ（各 page の main に className="container" を付ける想定） */
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+}
+
+/* 見出し＆説明 */
+.lead {
+  margin-top: 8px;
+  color: #374151;
+  line-height: 1.7;
+  max-width: 70ch;
+}
+
+/* 共通カード */
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.card:hover {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+.card:active {
+  transform: translateY(0);
+}
+
+/* ✅ “説明カード”だけ少し強調（フィルタが突然出てくる感を減らす） */
+.callout {
+  margin-top: 14px;
+  background: #fff;
+  border: 1px solid #d1d5db; /* 少し濃く */
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.calloutTitle {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.calloutText {
+  color: #374151;
+  line-height: 1.7;
+  font-size: 14px;
+}
+.calloutSteps {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.calloutSteps b {
+  font-weight: 800;
+}
+
+/* フィルタ */
+.filterBox {
+  margin-top: 16px;
+}
+.filterPanelTitle {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.filterHelp {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+/* ラベル＋補足 */
+.fieldLabel {
+  display: grid;
+  gap: 6px;
+}
+.fieldLabel strong {
+  font-weight: 800;
+}
+.fieldHelp {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-top: -2px;
+}
+
+/* select */
+.select {
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+}
+
+/* actions */
+.actionsRow {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+.btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.btnPrimary {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+.btnPrimary:hover {
+  background: #0b1220;
+}
+.btnSecondary {
+  background: #fff;
+  color: #111827;
+}
+
+/* chips（適用中） */
+.chipsWrap {
+  margin-top: 10px;
+}
+.chipsLabel {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 700;
+}
+.chipsRow {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ✅ 適用中は “アクティブ色” */
+.chip {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  text-decoration: none;
+
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #1d4ed8;
+}
+.chip:hover {
+  filter: brightness(0.98);
+}
+.chipX {
+  opacity: 0.8;
+  font-weight: 900;
+}
+
+/* Card inner layout */
+.cardRow {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+/* ✅ サムネを少し大きく（判断材料） */
+.thumb {
+  width: 200px;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  background: #e5e7eb;
+  border: 1px solid #e5e7eb;
+  flex: 0 0 auto;
+}
+
+/* mobile: サムネ上、テキスト下 */
+@media (max-width: 720px) {
+  .cardRow {
+    flex-direction: column;
   }
+  .thumb {
+    width: 100%;
+  }
+}
+
+/* VideoCard text */
+.kicker {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.titleSmall {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.tags {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.tagValue {
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.tagKey {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* ✅ “遷移できる”を常に見せる（mobileでも） */
+.cardCta {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #111827;
+  font-weight: 700;
+}
+.cardCtaArrow {
+  opacity: 0.8;
+}
+
+/* --- Detail page (Step B) --- */
+
+.detailTopbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 8px 0;
+  margin-bottom: 10px;
+  background: rgba(247, 247, 248, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.detailHero {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.detailThumb {
+  width: 360px;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  background: #e5e7eb;
+  border: 1px solid #e5e7eb;
+  flex: 0 0 auto;
+}
+
+.detailHeroBody {
+  min-width: 0;
+  flex: 1;
+}
+
+.detailTitle {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.detailMeta {
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.detailTags {
+  margin-top: 12px;
+}
+
+.detailSection {
+  margin-top: 14px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 900;
+  color: #111827;
+  margin-bottom: 10px;
+}
+
+.detailText {
+  line-height: 1.85;
+  color: #111827;
+  white-space: pre-wrap;
+}
+
+.detailGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.detailFieldTitle {
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.detailFieldBody {
+  color: #374151;
+  line-height: 1.85;
+  white-space: pre-wrap;
+}
+
+.noteList {
+  margin-top: 10px;
+  display: grid;
+  gap: 12px;
+}
+
+.noteCard {
+  padding: 14px 16px;
+}
+
+.noteTitle {
+  font-weight: 800;
+  color: #111827;
+}
+
+.noteBullets {
+  margin-top: 10px;
+  padding-left: 18px;
+  color: #374151;
+  line-height: 1.85;
+}
+
+.noteMeta {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.kvList {
+  display: grid;
+  gap: 10px;
+}
+
+.kvRow {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.kvKey {
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+}
+
+.kvVal {
+  font-size: 14px;
+  color: #111827;
+  word-break: break-all;
+}
+
+.detailEmpty {
+  color: #6b7280;
+}
+
+.errorBox {
+  color: #b91c1c;
+  white-space: pre-wrap;
+}
+
+/* mobile */
+@media (max-width: 720px) {
+  .detailHero {
+    flex-direction: column;
+  }
+  .detailThumb {
+    width: 100%;
+  }
+  .detailTitle {
+    font-size: 22px;
+  }
+  .kvRow {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* --- Step B: Detail page additions --- */
+
+/* 背景が途中で切れて白になるのを防ぐ */
+html, body { min-height: 100%; }
+body { min-height: 100vh; }
+
+/* 戻るリンク */
+.backLink {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 700;
+}
+.backLink:hover { text-decoration: underline; }
+
+/* 詳細：ヒーロー */
+.detailHero { margin-top: 14px; }
+.detailHeroRow {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.detailHeroBody { min-width: 0; flex: 1; }
+.detailTitle {
+  font-size: 26px;
+  line-height: 1.25;
+  letter-spacing: 0.2px;
+}
+.detailMeta {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* 詳細：サムネ（グレーベタ） */
+.thumbLarge {
+  width: 320px;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+}
+
+/* セクション */
+.detailGrid {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: #111827;
+}
+.sectionBody {
+  line-height: 1.75;
+  color: #111827;
+}
+
+/* key-value 表示 */
+.kvList { display: grid; gap: 10px; }
+.kv { display: grid; gap: 4px; }
+.kvKey { font-size: 12px; color: #6b7280; font-weight: 700; }
+.kvVal { line-height: 1.75; color: #111827; }
+
+/* 観察メモ */
+.noteGrid { display: grid; gap: 12px; }
+.noteCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+}
+.notePoints {
+  margin-top: 10px;
+  padding-left: 18px;
+  color: #111827;
+}
+.notePoints li { margin-top: 6px; line-height: 1.7; }
+
+/* エラーボックス（赤で読みやすく） */
+.errorBox {
+  margin-top: 10px;
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: #b91c1c;
+  border-radius: 12px;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+/* モバイル：詳細ヘッダは縦積み */
+@media (max-width: 640px) {
+  .detailHeroRow { flex-direction: column; }
+  .thumbLarge { width: 100%; }
+  .detailTitle { font-size: 22px; }
+}
+
+/* --- Step B: Detail page --- */
+
+/* 画面高さが足りない時も背景が白にならないように */
+html { background: #f7f7f8; }
+body { min-height: 100vh; }
+
+/* 非リンクのカードは hover 無効（一覧のカード hover は維持） */
+.cardStatic:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+/* 詳細：上部の戻る導線（固定） */
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 10px 0;
+  background: rgba(247, 247, 248, 0.92);
+  backdrop-filter: blur(6px);
+  margin-bottom: 10px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-weight: 700;
+}
+.backLink:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+.backLink:active { box-shadow: none; }
+
+/* 詳細：タイトルブロック */
+.detailHero { padding: 16px; }
+.detailHeroRow {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.detailThumb {
+  width: 320px;
+  border-radius: 14px;
+}
+
+.detailHeroBody { flex: 1; min-width: 0; }
+
+.detailTitle {
+  font-size: 28px;
+  line-height: 1.25;
+  letter-spacing: 0.2px;
+}
+
+.detailMetaRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.metaItem {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.metaLabel {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.metaValue {
+  font-size: 12px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.detailTags { margin-top: 12px; }
+
+.detailActions { margin-top: 12px; }
+
+.detailKeyPoint {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.detailKeyText {
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.65;
+}
+
+/* セクション見出し */
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.sectionHelp { margin-bottom: 10px; }
+
+/* 切り口の解説 */
+.detailExplainGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.explainItem {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.explainTag { margin-bottom: 8px; }
+
+.explainText {
+  color: #111827;
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+/* さらに詳しく（観察メモ） */
+.notesList { display: grid; gap: 12px; }
+
+.noteRow {
+  padding: 12px;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.noteBullets {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.8;
+  color: #111827;
+}
+
+.noteText {
+  margin-top: 10px;
+  color: #374151;
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+/* 運営用（折りたたみ） */
+.adminDetails { margin-top: 14px; }
+
+.adminSummary {
+  cursor: pointer;
+  font-weight: 800;
+  list-style: none;
+}
+.adminSummary::-webkit-details-marker { display: none; }
+
+.adminBody { margin-top: 10px; }
+
+.adminGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.adminItem .metaValue { word-break: break-all; }
+
+/* モバイル：サムネを上、情報を下へ */
+@media (max-width: 720px) {
+  .detailHeroRow { flex-direction: column; }
+  .detailThumb { width: 100%; }
+  .detailTitle { font-size: 22px; }
+  .metaItem { width: fit-content; }
+}
+
+/* --- Detail page small fixes (MVP) --- */
+
+/* a.btn が inline のままだと環境によって見た目が崩れることがあるので固定 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  max-width: 100%;
+}
+
+/* メタ情報（チャンネル/公開年/登録日）が折り返されて読みにくくなるのを防ぐ */
+.metaLabel,
+.metaValue {
+  white-space: nowrap;
+}
+
+/* --- Detail meta row fix --- */
+.detailMetaRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ラベル+値を“ピル”として確実に見せる */
+.metaItem {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.metaLabel {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.metaValue {
+  font-size: 12px;
+  color: #111827;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* --- Detail page tweaks (Step B v3) --- */
+
+/* 詳細ページのブロック間余白（TOPとリズムを揃える） */
+.detailBlock {
+  margin-top: 16px;
+}
+
+/* 戻る導線（固定） */
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 10px 0;
+  background: rgba(247, 247, 248, 0.92);
+  backdrop-filter: blur(6px);
+  margin-bottom: 10px;
+}
+
+/* Hero：2カラム（サムネ＋情報） */
+.detailHeroTop {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.detailHeroMain {
+  flex: 1;
+  min-width: 0;
+}
+
+/* メタ情報：詰まり解消（ピルで整列） */
+.detailMetaRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.metaItem {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.metaLabel {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.metaValue {
+  font-size: 12px;
+  color: #111827;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 小さめボタン（Hero内） */
+.btnSmall {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* 動画のポイント：Heroの下段へ（区切り線） */
+.detailHeroPoint {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.detailPointText {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.7;
+  color: #111827;
+}
+
+/* 切り口の解説：見出しを弱めに追加 */
+.explainHeading {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+/* 切り口の解説：このブロック内だけ「値だけのタグ」に見せる */
+.tagValueOnly .tagKey {
+  display: none;
+}
+
+/* さらに詳しく：入れ子枠線をやめ、結論を強める */
+.notesList {
+  display: grid;
+  gap: 14px;
+}
+
+.noteRow {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.noteBullets {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.8;
+  color: #374151; /* 他説明文と同じトーン */
+  font-size: 14px;
+}
+
+.noteTextStrong {
+  margin-top: 10px;
+  color: #111827;
+  font-weight: 800; /* 結論を強める */
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+/* 下部CTA */
+.detailBottomCta {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.btnFull {
+  width: 100%;
+}
+
+/* mobile：Heroは縦積み */
+@media (max-width: 720px) {
+  .detailHeroTop {
+    flex-direction: column;
+  }
+  .detailThumb {
+    width: 100%;
+  }
+}
+
+/* ===== Detail page tweaks (v3 -> v4) : append at end ===== */
+
+/* 詳細ページ：ブロック間の余白を統一 */
+.detailStack {
+  margin-top: 14px;
+  display: grid;
+  gap: 16px;
+}
+
+/* タイトルブロック：2カラム（サムネ＋情報） */
+.detailHeroTop {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.detailHeroMain {
+  min-width: 0;
+}
+
+/* メタ情報：詰まり防止 */
+.detailMetaRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.metaPill {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.metaLabel {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.metaValue {
+  font-size: 12px;
+  color: #111827;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* 動画のポイント：タイトルブロックの下段へ */
+.detailHeroPoint {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.detailPointText {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.7;
+  color: #111827;
+}
+
+/* 切り口の解説：小見出し */
+.explainMiniTitle {
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+/* 切り口の解説：このブロックのタグは値だけ表示する前提 */
+.explainTag .tagKey {
+  display: none;
+}
+
+/* さらに詳しく：結論を薄枠で強調 */
+.noteConclusion {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  color: #111827;
+  font-weight: 700;
+  line-height: 1.75;
+}
+
+/* 下部CV：ボタン単体で目立たせる */
+.detailBottomCta {
+  display: flex;
+  justify-content: center;
+}
+
+.btnWide {
+  width: 100%;
+}
+
+/* モバイル：2カラム解除 */
+@media (max-width: 720px) {
+  .detailHeroTop {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== Detail page fixes (v5) : append at end ===== */
+
+/* 詳細ページ：ブロック間の余白を統一 */
+.detailStack {
+  margin-top: 14px;
+  display: grid;
+  gap: 16px;
+}
+
+/* Hero：この中は「2カラム → 下段 → 下段」 */
+.detailHero {
+  display: block; /* 既存の display:flex を無効化 */
+}
+
+/* 2カラム（サムネ + 情報） */
+.detailHeroTop {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .detailHeroTop {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* メタ情報ピル */
+.detailMetaRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.metaPill {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.metaLabel {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.metaValue {
+  font-size: 12px;
+  color: #111827;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Hero 下段（区切り線） */
+.detailHeroPoint {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.detailPointText {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.7;
+  color: #111827;
+}
+
+.detailHeroCta {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eef2f7;
+}
+
+/* 小さめボタン（Hero内の弱導線） */
+.btnSmall {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* 切り口の解説：小見出し */
+.explainMiniTitle {
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+/* さらに詳しく：箇条書き→区切り線→結論 */
+.noteDivider {
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  margin: 12px 0;
+}
+
+.noteConclusionText {
+  color: #111827;
+  font-weight: 800;
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+/* 下部CV：ボタン単体で目立たせる */
+.detailBottomCta {
+  display: flex;
+  justify-content: center;
+}
+
+.btnFull {
+  width: 100%;
+}
+
+/* ===== Detail page final tweaks (v6) : append at end ===== */
+
+/* タイトルブロック：YouTube（上）ボタンは区切り線なし＆余白で役割差 */
+.detailHeroAction {
+  margin-top: 14px; /* ←「ポイント」から少し離す */
+}
+
+/* 「切り口の解説」内のタグは値だけにする（keyは小見出しで担保） */
+.explainTag .tagKey {
+  display: none;
+}
+
+/* さらに詳しく：箇条書き→区切り線→ラベル→結論 */
+.noteDivider {
+  margin-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.noteLabel {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+}
+
+.noteConclusion {
+  margin-top: 6px;
+  color: #111827;
+  font-weight: 700;
+  line-height: 1.75;
+}
+
+/* 下部CTA：主導線なので上下余白を少し増やす */
+.detailBottomCta {
+  margin-top: 18px;
+  margin-bottom: 6px;
+}
+
+/* ===== Detail page final tweaks (v6 -> v7) : append at end ===== */
+
+/* 「演出メモ」結論：枠線（入れ子）をやめてテキストだけにする */
+.noteConclusion {
+  margin-top: 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+
+  color: #111827;
+  font-weight: 800;
+  line-height: 1.8;
+}
+
+/* 下部の主CTA：上下余白を増やして主導線化 */
+.detailBottomCta {
+  margin: 32px 0;
+}
+
+/* ===== Detail page final tweaks (YouTube計測 & 最終見た目) ===== */
+
+.detailHeroAction {
+  margin-top: 18px; /* 区切り線はやめて余白で分ける */
+}
+
+.noteRowPlain {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.noteDivider {
+  margin-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.noteConclusionLabel {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+}
+
+.noteConclusionText {
+  margin-top: 6px;
+  color: #111827;
+  font-weight: 800;
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+/* 下部CTA：主導線として上下の余白を強める */
+.detailBottomCta {
+  margin: 32px 0; /* ← “倍”のイメージ */
 }

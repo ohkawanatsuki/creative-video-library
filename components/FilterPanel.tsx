@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, FormEvent } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { gtmEvent } from "@/lib/gtm";
 
@@ -49,7 +49,6 @@ export function FilterPanel({
 }: Props) {
   const router = useRouter();
 
-  // サーバーから来た値を初期値にして、クライアント側で保持
   let pvfState = pvf ?? "";
   let vmcState = vmc ?? "";
   let toneState = tone ?? "";
@@ -74,14 +73,12 @@ export function FilterPanel({
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    // フィルタ適用（URL更新）
     pushFilterUrl({
       pvf: pvfState || undefined,
       vmc: vmcState || undefined,
       tone: toneState || undefined,
     });
 
-    // ✅ GA4 用の最小イベント
     gtmEvent({
       event: "filter_used",
       pvf: pvfState || null,
@@ -92,78 +89,84 @@ export function FilterPanel({
 
   function onReset() {
     router.push("/");
-    gtmEvent({ event: "filter_used", action: "reset" });
+    gtmEvent({ event: "filter_used", action: "reset", pvf: null, vmc: null, tone: null });
   }
 
   return (
-    <section
-      style={{
-        marginTop: 16,
-        border: "1px solid #ddd",
-        borderRadius: 10,
-        padding: 12,
-      }}
-    >
-      <div style={{ fontWeight: 700 }}>フィルタ（最小）</div>
+    <section className="card filterBox">
+      <div className="filterPanelTitle">条件で探す</div>
+      <div className="filterHelp">まずはどれか1つ選んで「絞り込む」を押してみてください。</div>
 
-      {/* 適用中チップ（外す操作も filter_used にする） */}
       {hasFilter && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: 13, opacity: 0.85 }}>適用中：</div>
+        <div className="chipsWrap">
+          <div className="chipsLabel">適用中：</div>
 
-          <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div className="chipsRow">
             {pvfState && (
               <a
                 href={buildHref(currentQuery, "pvf")}
-                style={chipStyle}
+                className="chip"
                 onClick={(e) => {
                   e.preventDefault();
                   gtmEvent({ event: "filter_used", action: "remove", key: "pvf", value: pvfState });
-                  pushFilterUrl({ pvf: "", vmc: vmcState || undefined, tone: toneState || undefined });
+                  pushFilterUrl({
+                    pvf: "",
+                    vmc: vmcState || undefined,
+                    tone: toneState || undefined,
+                  });
                 }}
               >
-                商品価値の捉え方：{valueLabel(pvfState)} <span style={{ opacity: 0.7 }}>×</span>
+                商品価値の捉え方：{valueLabel(pvfState)} <span className="chipX">×</span>
               </a>
             )}
+
             {vmcState && (
               <a
                 href={buildHref(currentQuery, "vmc")}
-                style={chipStyle}
+                className="chip"
                 onClick={(e) => {
                   e.preventDefault();
                   gtmEvent({ event: "filter_used", action: "remove", key: "vmc", value: vmcState });
-                  pushFilterUrl({ pvf: pvfState || undefined, vmc: "", tone: toneState || undefined });
+                  pushFilterUrl({
+                    pvf: pvfState || undefined,
+                    vmc: "",
+                    tone: toneState || undefined,
+                  });
                 }}
               >
-                映像の主役：{valueLabel(vmcState)} <span style={{ opacity: 0.7 }}>×</span>
+                映像の主役：{valueLabel(vmcState)} <span className="chipX">×</span>
               </a>
             )}
+
             {toneState && (
               <a
                 href={buildHref(currentQuery, "tone")}
-                style={chipStyle}
+                className="chip"
                 onClick={(e) => {
                   e.preventDefault();
                   gtmEvent({ event: "filter_used", action: "remove", key: "tone", value: toneState });
-                  pushFilterUrl({ pvf: pvfState || undefined, vmc: vmcState || undefined, tone: "" });
+                  pushFilterUrl({
+                    pvf: pvfState || undefined,
+                    vmc: vmcState || undefined,
+                    tone: "",
+                  });
                 }}
               >
-                感情トーン：{valueLabel(toneState)} <span style={{ opacity: 0.7 }}>×</span>
+                感情トーン：{valueLabel(toneState)} <span className="chipX">×</span>
               </a>
             )}
           </div>
         </div>
       )}
 
-      <form onSubmit={onSubmit} style={{ marginTop: 10, display: "grid", gap: 10, maxWidth: 700 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14 }}>
-            <strong>商品価値の捉え方</strong>
-          </span>
+      <form onSubmit={onSubmit} style={{ marginTop: 12, display: "grid", gap: 12, maxWidth: 700 }}>
+        <label className="fieldLabel">
+          <strong>商品価値の捉え方</strong>
+          <div className="fieldHelp">例：体験・時間 / 機能・性能 / 価格 など</div>
           <select
             name="pvf"
             defaultValue={pvfState}
-            style={selectStyle}
+            className="select"
             onChange={(e) => (pvfState = e.target.value)}
           >
             <option value="">（指定しない）</option>
@@ -176,14 +179,13 @@ export function FilterPanel({
           </select>
         </label>
 
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14 }}>
-            <strong>映像の主役</strong>
-          </span>
+        <label className="fieldLabel">
+          <strong>映像の主役</strong>
+          <div className="fieldHelp">例：人 / シーン・世界観 / 商品そのもの など</div>
           <select
             name="vmc"
             defaultValue={vmcState}
-            style={selectStyle}
+            className="select"
             onChange={(e) => (vmcState = e.target.value)}
           >
             <option value="">（指定しない）</option>
@@ -196,14 +198,13 @@ export function FilterPanel({
           </select>
         </label>
 
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14 }}>
-            <strong>感情トーン</strong>
-          </span>
+        <label className="fieldLabel">
+          <strong>感情トーン</strong>
+          <div className="fieldHelp">例：チル / 高揚 / 温かい など</div>
           <select
             name="tone"
             defaultValue={toneState}
-            style={selectStyle}
+            className="select"
             onChange={(e) => (toneState = e.target.value)}
           >
             <option value="">（指定しない）</option>
@@ -216,43 +217,20 @@ export function FilterPanel({
           </select>
         </label>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button type="submit" style={buttonStyle}>
+        <div className="actionsRow">
+          <button type="submit" className="btn btnPrimary">
             絞り込む
           </button>
 
-          <button type="button" onClick={onReset} style={{ ...buttonStyle, background: "transparent" }}>
+          <button type="button" onClick={onReset} className="btn btnSecondary">
             リセット
           </button>
 
-          <span style={{ fontSize: 12, opacity: 0.8 }}>件数：{rowsCount}</span>
+          <span className="muted" style={{ fontSize: 12 }}>
+            件数：{rowsCount}
+          </span>
         </div>
       </form>
     </section>
   );
 }
-
-const selectStyle: CSSProperties = {
-  padding: 10,
-  border: "1px solid #ddd",
-  borderRadius: 8,
-};
-
-const buttonStyle: CSSProperties = {
-  padding: "10px 14px",
-  border: "1px solid #ddd",
-  borderRadius: 8,
-  cursor: "pointer",
-};
-
-const chipStyle: CSSProperties = {
-  display: "inline-flex",
-  gap: 6,
-  alignItems: "center",
-  border: "1px solid #ddd",
-  borderRadius: 999,
-  padding: "6px 10px",
-  textDecoration: "none",
-  fontSize: 13,
-  color: "inherit",
-};

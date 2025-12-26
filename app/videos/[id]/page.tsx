@@ -1,321 +1,453 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import Script from "next/script";
 
-type Props = {
-  params: { id: string } | Promise<{ id: string }>;
-};
+export const dynamic = "force-dynamic";
 
-type VideoRow = {
-  id: string;
-  youtube_id: string | null;
-  title: string | null;
-  channel_name: string | null;
-  thumbnail_url: string | null;
-  published_year: number | null;
-  video_core_summary?: { hitokoto_summary: string | null }[] | null;
-  video_structure_core?: {
-    product_value_focus: string | null;
-    visual_main_character: string | null;
-    emotional_tone: string | null;
-  }[] | null;
-};
+type Params = { id: string };
 
-type ObservationNoteRow = {
-  id: string;
-  video_id: string;
-  observation_text: string | null;
-  observation_points: any | null; // jsonb
-  created_at: string;
-};
-
-type StructureDetailRow = {
-  id: string;
-  video_id: string;
-  product_value_focus_detail: string | null;
-  visual_main_character_detail: string | null;
-  appeal_method: string | null;
-  appeal_method_detail: string | null;
-  emotional_tone_detail: string | null;
-  created_at: string;
-};
-
-function logSupabaseError(label: string, error: any, meta?: Record<string, any>) {
-  console.error(`[supabase_error] ${label}`, {
-    message: error?.message,
-    code: error?.code,
-    details: error?.details,
-    hint: error?.hint,
-    meta,
-  });
+function normalizeText(v: unknown): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s.length ? s : null;
 }
 
-function normalizePoints(points: any): string[] {
-  if (!points) return [];
-  if (Array.isArray(points)) return points.map(String);
-  if (typeof points === "object") return Object.values(points).map(String);
-  return [String(points)];
-}
+function normalizeBullets(v: unknown): string[] {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.map(String).map((s) => s.trim()).filter(Boolean);
 
-export default async function VideoDetailPage({ params }: Props) {
-  // ✅ params が Promise になる環境差を吸収
-  const resolvedParams = await Promise.resolve(params as any);
-  const videoId = resolvedParams?.id as string | undefined;
-
-  if (!videoId || videoId === "undefined") {
-    return (
-      <main style={{ padding: 40 }}>
-        <Link href="/" style={{ textDecoration: "none" }}>
-          ← 一覧へ戻る
-        </Link>
-
-        <h1 style={{ marginTop: 16 }}>動画詳細（エラー）</h1>
-        <p>
-          URLのIDが取得できませんでした。
-          <br />
-          （例：/videos/undefined になっている可能性があります）
-        </p>
-      </main>
-    );
+  if (typeof v === "string") {
+    const trimmed = v.trim();
+    if (!trimmed.length) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map(String).map((s) => s.trim()).filter(Boolean);
+      }
+    } catch {
+      return [trimmed];
+    }
   }
+  return [];
+}
 
-  // ①②③：動画＋心臓＋カード用構造
-  const { data, error } = await supabase
+function pickFirst(obj: any, keys: string[]) {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+  }
+  return null;
+}
+
+function pickFirstArray(obj: any, keys: string[]) {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v === undefined || v === null) continue;
+    if (Array.isArray(v)) return v;
+    if (typeof v === "string" && v.trim().length) return v;
+  }
+  return [];
+}
+
+function formatDateYMD(dateStr?: string | null) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "—";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}/${m}/${dd}`;
+}
+
+export default async function VideoDetailPage({
+  params,
+}: {
+  params: Params | Promise<Params>;
+}) {
+  const p = await Promise.resolve(params as any);
+  const id = p.id as string;
+
+  const { data: row, error } = await supabase
     .from("videos")
     .select(
       `
         id,
-        youtube_id,
         title,
+        youtube_id,
         channel_name,
-        thumbnail_url,
         published_year,
+        created_at,
         video_core_summary ( hitokoto_summary ),
-        video_structure_core ( product_value_focus, visual_main_character, emotional_tone )
+        video_structure_core (
+          product_value_focus,
+          visual_main_character,
+          emotional_tone
+        ),
+        video_structure_detail (
+          product_value_focus_detail,
+          visual_main_character_detail,
+          emotional_tone_detail,
+          appeal_method,
+          appeal_method_detail
+        ),
+        video_observation_notes (
+          created_at,
+          observation_text,
+          observation_points
+        )
       `
     )
-    .eq("id", videoId)
-    .limit(1)
+    .eq("id", id)
     .maybeSingle();
 
-  if (error) {
-    logSupabaseError("video_detail:videos_join_core_and_core_tags", error, { videoId });
-
+  if (error || !row) {
     return (
-      <main style={{ padding: 40 }}>
-        <Link href="/" style={{ textDecoration: "none" }}>
-          ← 一覧へ戻る
-        </Link>
-
-        <h1 style={{ marginTop: 16 }}>動画詳細（エラー）</h1>
-        <pre style={{ color: "red", whiteSpace: "pre-wrap" }}>
-          {JSON.stringify(error, null, 2)}
-        </pre>
-      </main>
-    );
-  }
-
-  if (!data) {
-    return (
-      <main style={{ padding: 40 }}>
-        <Link href="/" style={{ textDecoration: "none" }}>
-          ← 一覧へ戻る
-        </Link>
-
-        <h1 style={{ marginTop: 16 }}>動画詳細</h1>
-        <p>該当の動画が見つかりませんでした。</p>
-        <div style={{ marginTop: 10, fontSize: 12, opacity: 0.8 }}>
-          id: {videoId}
+      <main className="container">
+        <div className="topBar">
+          <Link href="/" className="backLink">
+            ← 一覧へ戻る
+          </Link>
         </div>
+
+        <section className="card cardStatic detailBlock">
+          <h1 style={{ fontSize: 18, fontWeight: 800 }}>
+            詳細の取得でエラーが発生しました
+          </h1>
+          <pre
+            className="errorBox"
+            style={{ marginTop: 10, fontSize: 12, lineHeight: 1.6 }}
+          >
+            {JSON.stringify(error ?? { message: "not found" }, null, 2)}
+          </pre>
+        </section>
       </main>
     );
   }
 
-  const v = data as VideoRow;
+  const v: any = row;
 
-  const hitokotoSummary =
-    v.video_core_summary?.[0]?.hitokoto_summary ?? "（ヒトコト要約未入力）";
+  // --- Core（カード用タグ） ---
+  const core = (v.video_structure_core?.[0] ?? null) as any;
 
-  const core = v.video_structure_core?.[0];
-  const productValueFocus = core?.product_value_focus ?? "（未入力）";
-  const visualMainCharacter = core?.visual_main_character ?? "（未入力）";
-  const emotionalTone = core?.emotional_tone ?? "（未入力）";
+  const pvf = normalizeText(
+    pickFirst(core, ["product_value_focus", "pvf", "productValueFocus"])
+  );
+  const vmc = normalizeText(
+    pickFirst(core, ["visual_main_character", "vmc", "visualMainCharacter"])
+  );
+  const tone = normalizeText(
+    pickFirst(core, ["emotional_tone", "tone", "emotionalTone"])
+  );
 
-  // ④：構造の補足（基本1件想定だが、まずは最新1件を採用）
-  const { data: detailData, error: detailError } = await supabase
-    .from("video_structure_detail")
-    .select(
-      `
-        id,
-        video_id,
-        product_value_focus_detail,
-        visual_main_character_detail,
-        appeal_method,
-        appeal_method_detail,
-        emotional_tone_detail,
-        created_at
-      `
-    )
-    .eq("video_id", videoId)
-    .order("created_at", { ascending: false })
-    .limit(1);
+  // --- Detail（切り口の解説） ---
+  const detail = (v.video_structure_detail?.[0] ?? null) as any;
 
-  if (detailError) {
-    logSupabaseError("video_detail:structure_detail_latest", detailError, { videoId });
-  }
+  const pvfNote = normalizeText(
+    pickFirst(detail, [
+      "product_value_focus_detail",
+      "product_value_focus_note",
+      "pvf_note",
+      "pvfNote",
+    ])
+  );
+  const vmcNote = normalizeText(
+    pickFirst(detail, [
+      "visual_main_character_detail",
+      "visual_main_character_note",
+      "vmc_note",
+      "vmcNote",
+    ])
+  );
+  const toneNote = normalizeText(
+    pickFirst(detail, [
+      "emotional_tone_detail",
+      "emotional_tone_note",
+      "tone_note",
+      "toneNote",
+    ])
+  );
 
-  const structureDetail = (detailData?.[0] as StructureDetailRow | undefined) ?? null;
+  const appealMethod = normalizeText(
+    pickFirst(detail, ["appeal_method", "appealMethod", "main_appeal_method"])
+  );
+  const appealMethodNote = normalizeText(
+    pickFirst(detail, [
+      "appeal_method_detail",
+      "appeal_method_note",
+      "appealMethodNote",
+    ])
+  );
 
-  // ⑤：観察メモ（複数件）
-  const { data: notesData, error: notesError } = await supabase
-    .from("video_observation_notes")
-    .select("id, video_id, observation_text, observation_points, created_at")
-    .eq("video_id", videoId)
-    .order("created_at", { ascending: false })
-    .limit(10);
+  // --- Summary（ヒトコト） ---
+  const hitokoto = normalizeText(v.video_core_summary?.[0]?.hitokoto_summary);
 
-  if (notesError) {
-    logSupabaseError("video_detail:observation_notes_latest10", notesError, { videoId });
-  }
+  // --- Observation Notes（さらに詳しく） ---
+  const rawNotes = (v.video_observation_notes ?? []) as any[];
+  rawNotes.sort((a, b) => {
+    const ta = new Date(a?.created_at ?? 0).getTime();
+    const tb = new Date(b?.created_at ?? 0).getTime();
+    return ta - tb;
+  });
 
-  const notes = ((notesData ?? []) as ObservationNoteRow[]).map((n) => ({
-    ...n,
-    points: normalizePoints(n.observation_points),
-  }));
+  const notes = rawNotes
+    .map((n, i) => {
+      const text = normalizeText(
+        pickFirst(n, [
+          "observation_text",
+          "observationText",
+          "note",
+          "memo",
+          "body",
+          "text",
+          "content",
+        ])
+      );
+      const bullets = normalizeBullets(
+        pickFirstArray(n, [
+          "observation_points",
+          "observationPoints",
+          "points",
+          "bullets",
+          "items",
+          "list",
+        ])
+      );
+
+      return {
+        key: `${n?.created_at ?? "n"}-${i}`,
+        text,
+        bullets,
+      };
+    })
+    .filter((n) => (n.text && n.text.length) || n.bullets.length > 0);
+
+  const channelName = normalizeText(v.channel_name) ?? "—";
+  const publishedYear = v.published_year ? String(v.published_year) : "—";
+  const createdAt = formatDateYMD(v.created_at);
+
+  const youtubeId = v.youtube_id ? String(v.youtube_id) : "";
+  const videoId = v.id ? String(v.id) : "";
 
   return (
-    <main style={{ padding: 40 }}>
-      <Link href="/" style={{ textDecoration: "none" }}>
-        ← 一覧へ戻る
-      </Link>
-
-      <h1 style={{ marginTop: 16 }}>{v.title ?? "（タイトル未入力）"}</h1>
-
-      <div style={{ marginTop: 8, opacity: 0.8 }}>
-        {v.channel_name ?? "（チャンネル未入力）"}
-        {v.published_year ? ` / ${v.published_year}` : ""}
+    <main className="container">
+      <div className="topBar">
+        <Link href="/" className="backLink">
+          ← 一覧へ戻る
+        </Link>
       </div>
 
-      <section style={{ marginTop: 18 }}>
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>ヒトコト要約</h2>
-        <div style={{ lineHeight: 1.7 }}>{hitokotoSummary}</div>
-      </section>
+      <div className="detailStack">
+        {/* Hero */}
+        <section className="card cardStatic detailHero">
+          {/* 2カラム（サムネ＋情報） */}
+          <div className="detailHeroTop">
+            <div className="detailThumb" aria-hidden="true" />
 
-      <section style={{ marginTop: 18 }}>
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>構造タグ（カード用）</h2>
-        <div style={{ lineHeight: 1.8 }}>
-          <div>
-            <strong>商品価値の捉え方：</strong>
-            {productValueFocus}
-          </div>
-          <div>
-            <strong>映像の主役：</strong>
-            {visualMainCharacter}
-          </div>
-          <div>
-            <strong>感情トーン：</strong>
-            {emotionalTone}
-          </div>
-        </div>
-      </section>
+            <div className="detailHeroMain">
+              <h1 className="detailTitle">{v.title ?? "（タイトル未入力）"}</h1>
 
-      <section style={{ marginTop: 18 }}>
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>構造の補足（詳細）</h2>
+              <div className="detailMetaRow">
+                <span className="metaPill">
+                  <span className="metaLabel">チャンネル</span>
+                  <span className="metaValue">{channelName}</span>
+                </span>
 
-        {detailError ? (
-          <pre style={{ color: "red", whiteSpace: "pre-wrap" }}>
-            {JSON.stringify(detailError, null, 2)}
-          </pre>
-        ) : !structureDetail ? (
-          <div style={{ opacity: 0.8 }}>（構造の補足はまだありません）</div>
-        ) : (
-          <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ lineHeight: 1.7 }}>
-              <strong>商品価値の捉え方（補足）：</strong>
-              <div>{structureDetail.product_value_focus_detail ?? "（未入力）"}</div>
-            </div>
+                <span className="metaPill">
+                  <span className="metaLabel">公開年</span>
+                  <span className="metaValue">{publishedYear}</span>
+                </span>
 
-            <div style={{ lineHeight: 1.7 }}>
-              <strong>映像の主役（補足）：</strong>
-              <div>{structureDetail.visual_main_character_detail ?? "（未入力）"}</div>
-            </div>
+                <span className="metaPill">
+                  <span className="metaLabel">登録日</span>
+                  <span className="metaValue">{createdAt}</span>
+                </span>
+              </div>
 
-            <div style={{ lineHeight: 1.7 }}>
-              <strong>主な訴求手法：</strong>
-              <div>{structureDetail.appeal_method ?? "（未入力）"}</div>
-            </div>
-
-            <div style={{ lineHeight: 1.7 }}>
-              <strong>主な訴求手法（補足）：</strong>
-              <div>{structureDetail.appeal_method_detail ?? "（未入力）"}</div>
-            </div>
-
-            <div style={{ lineHeight: 1.7 }}>
-              <strong>感情トーン（補足）：</strong>
-              <div>{structureDetail.emotional_tone_detail ?? "（未入力）"}</div>
-            </div>
-
-            <div style={{ fontSize: 12, opacity: 0.7 }}>
-              {new Date(structureDetail.created_at).toLocaleString()}
+              <div className="detailTags">
+                <div className="tags">
+                  <span className="tag">
+                    <span className="tagValue">{pvf ?? "未入力"}</span>
+                    <span className="tagKey">価値</span>
+                  </span>
+                  <span className="tag">
+                    <span className="tagValue">{vmc ?? "未入力"}</span>
+                    <span className="tagKey">主役</span>
+                  </span>
+                  <span className="tag">
+                    <span className="tagValue">{tone ?? "未入力"}</span>
+                    <span className="tagKey">トーン</span>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        )}
-      </section>
 
-      <section style={{ marginTop: 18 }}>
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>観察メモ（判断の補助線）</h2>
+          {/* 動画のポイント（区切り線） */}
+          <div className="detailHeroPoint">
+            <div className="kicker">動画のポイント</div>
+            <div className="detailPointText">
+              {hitokoto ?? "（ヒトコト要約未入力）"}
+            </div>
+          </div>
 
-        {notesError ? (
-          <pre style={{ color: "red", whiteSpace: "pre-wrap" }}>
-            {JSON.stringify(notesError, null, 2)}
-          </pre>
-        ) : notes.length === 0 ? (
-          <div style={{ opacity: 0.8 }}>（観察メモはまだありません）</div>
-        ) : (
-          <div style={{ display: "grid", gap: 12 }}>
-            {notes.map((n) => (
-              <article
-                key={n.id}
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: 10,
-                  padding: 12,
-                }}
+          {/* 上のYouTubeボタン（区切り線なし、マージンで差を出す） */}
+          <div className="detailHeroAction">
+            {youtubeId ? (
+              <a
+                className="btn btnSecondary btnSmall"
+                href={`https://www.youtube.com/watch?v=${v.youtube_id}`}
+                target="_blank"
+                rel="noreferrer"
+                data-gtm="youtube_click"
+                data-yt-pos="top"
+                data-video-id={v.id}
+                data-pvf={pvf ?? ""}
+                data-vmc={vmc ?? ""}
+                data-tone={tone ?? ""}
               >
-                <div style={{ lineHeight: 1.7 }}>
-                  {n.observation_text ?? "（本文なし）"}
+                YouTubeで動画を見る →
+              </a>
+            ) : (
+              <span className="muted">（youtube_id が未設定です）</span>
+            )}
+          </div>
+        </section>
+
+        {/* 切り口の解説 */}
+        <section className="card cardStatic detailBlock">
+          <h2 className="sectionTitle">切り口の解説</h2>
+
+          <div className="detailExplainGrid">
+            <div className="explainItem">
+              <div className="explainMiniTitle">商品価値の捉え方</div>
+              <div className="explainTag">
+                <span className="tag">
+                  <span className="tagValue">{pvf ?? "未入力"}</span>
+                </span>
+              </div>
+              <div className="explainText">{pvfNote ?? "（未入力）"}</div>
+            </div>
+
+            <div className="explainItem">
+              <div className="explainMiniTitle">映像の主役</div>
+              <div className="explainTag">
+                <span className="tag">
+                  <span className="tagValue">{vmc ?? "未入力"}</span>
+                </span>
+              </div>
+              <div className="explainText">{vmcNote ?? "（未入力）"}</div>
+            </div>
+
+            <div className="explainItem">
+              <div className="explainMiniTitle">感情トーン</div>
+              <div className="explainTag">
+                <span className="tag">
+                  <span className="tagValue">{tone ?? "未入力"}</span>
+                </span>
+              </div>
+              <div className="explainText">{toneNote ?? "（未入力）"}</div>
+            </div>
+
+            <div className="explainItem">
+              <div className="explainMiniTitle">主な訴求方法</div>
+              <div className="explainTag">
+                <span className="tag">
+                  <span className="tagValue">{appealMethod ?? "未入力"}</span>
+                </span>
+              </div>
+              <div className="explainText">{appealMethodNote ?? "（未入力）"}</div>
+            </div>
+          </div>
+        </section>
+
+        {/* さらに詳しく */}
+        <section className="card cardStatic detailBlock">
+          <h2 className="sectionTitle">さらに詳しく（提案のヒント）</h2>
+
+          {notes.length === 0 ? (
+            <p className="muted">（メモはまだありません）</p>
+          ) : (
+            <div className="notesList">
+              {notes.map((n) => (
+                <div key={n.key} className="noteRowPlain">
+                  {n.bullets.length > 0 && (
+                    <ul className="noteBullets">
+                      {n.bullets.map((b: string, i: number) => (
+                        <li key={i}>{b}</li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {(n.text || "").length > 0 && (
+                    <>
+                      <div className="noteDivider" />
+                      <div className="noteConclusionLabel">演出メモ</div>
+                      <div className="noteConclusionText">{n.text}</div>
+                    </>
+                  )}
                 </div>
+              ))}
+            </div>
+          )}
+        </section>
 
-                {n.points.length > 0 && (
-                  <ul style={{ marginTop: 10, paddingLeft: 18 }}>
-                    {n.points.map((p, idx) => (
-                      <li key={idx} style={{ marginTop: 4 }}>
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+        {/* 下部CV（主導線） */}
+        {youtubeId ? (
+          <div className="detailBottomCta">
+            <a
+              className="btn btnPrimary btnWide"
+              href={`https://www.youtube.com/watch?v=${v.youtube_id}`}
+              target="_blank"
+              rel="noreferrer"
+              data-gtm="youtube_click"
+              data-yt-pos="bottom"
+              data-video-id={v.id}
+              data-pvf={pvf ?? ""}
+              data-vmc={vmc ?? ""}
+              data-tone={tone ?? ""}
+            >
+              YouTubeで元動画を確認する →
+            </a>
+          </div>
+        ) : null}
 
-                <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-                  {new Date(n.created_at).toLocaleString()}
-                </div>
-              </article>
-            ))}
+        {/* 運営用 */}
+        <details className="card cardStatic adminDetails">
+          <summary className="adminSummary">運営用（IDなど）</summary>
+          <div className="adminBody">
+            <div className="adminGrid">
+              <div className="adminItem">
+                <div className="metaLabel">youtube_id</div>
+                <div className="metaValue">{youtubeId || "—"}</div>
+              </div>
+              <div className="adminItem">
+                <div className="metaLabel">video_id</div>
+                <div className="metaValue">{videoId}</div>
+              </div>
+            </div>
           </div>
-        )}
-      </section>
-
-      <section style={{ marginTop: 18 }}>
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>参照情報（事実）</h2>
-        <div style={{ lineHeight: 1.8 }}>
-          <div>
-            <strong>youtube_id：</strong>
-            {v.youtube_id ?? "null"}
-          </div>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>
-            <strong>video id：</strong> {v.id}
-          </div>
-        </div>
-      </section>
+        </details>
+      </div>
+      <Script id="mvp-youtube-click" strategy="afterInteractive">
+        {`
+        (function () {
+          window.dataLayer = window.dataLayer || [];
+          document.addEventListener('click', function (e) {
+            var el = e.target && e.target.closest && e.target.closest('a[data-gtm="youtube_click"]');
+            if (!el) return;
+            var d = el.dataset || {};
+            window.dataLayer.push({
+              event: 'youtube_click',
+              video_id: d.videoId || '',
+              pvf: d.pvf || '',
+              vmc: d.vmc || '',
+              tone: d.tone || '',
+              youtube_position: d.ytPos || ''
+            });
+          }, true);
+        })();
+        `}
+      </Script>
     </main>
   );
 }

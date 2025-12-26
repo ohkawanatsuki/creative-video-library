@@ -20,45 +20,61 @@ export function VideoCard({
   visualMainCharacter,
   emotionalTone,
 }: Props) {
+  const summary = hitokotoSummary ?? "（ヒトコト要約未入力）";
+
   return (
     <Link
       href={`/videos/${id}`}
       onClick={() => gtmEvent({ event: "open_detail", video_id: id })}
-      style={{ textDecoration: "none", color: "inherit" }}
+      style={{ textDecoration: "none", color: "inherit", display: "block" }}
     >
-      <article
-        style={{
-          border: "1px solid #ddd",
-          borderRadius: 10,
-          padding: 12,
-          cursor: "pointer",
-        }}
-      >
-        <div style={{ fontWeight: 700 }}>
-          {title ?? "（タイトル未入力）"}
-        </div>
+      <article className="card">
+        <div className="cardRow">
+          <div className="thumb" aria-hidden="true" />
 
-        <div style={{ marginTop: 6 }}>
-          {hitokotoSummary ?? "（ヒトコト要約未入力）"}
-        </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="kicker">動画のポイント（ヒトコト要約）</div>
 
-        <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6 }}>
-          <div>
-            <strong>商品価値の捉え方：</strong>
-            {productValueFocus ?? "（未入力）"}
-          </div>
-          <div>
-            <strong>映像の主役：</strong>
-            {visualMainCharacter ?? "（未入力）"}
-          </div>
-          <div>
-            <strong>感情トーン：</strong>
-            {emotionalTone ?? "（未入力）"}
-          </div>
-        </div>
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 18,
+                fontWeight: 800,
+                lineHeight: 1.55,
+                letterSpacing: 0.1,
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {summary}
+            </div>
 
-        <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6 }}>
-          id: {id}
+            <div className="titleSmall">
+              <span className="muted">動画タイトル：</span>
+              {title ?? "（タイトル未入力）"}
+            </div>
+
+            <div className="tags">
+              <span className="tag">
+                <span className="tagValue">{productValueFocus ?? "未入力"}</span>
+                <span className="tagKey">価値</span>
+              </span>
+              <span className="tag">
+                <span className="tagValue">{visualMainCharacter ?? "未入力"}</span>
+                <span className="tagKey">主役</span>
+              </span>
+              <span className="tag">
+                <span className="tagValue">{emotionalTone ?? "未入力"}</span>
+                <span className="tagKey">トーン</span>
+              </span>
+            </div>
+
+            <div className="cardCta">
+              詳細を見る <span className="cardCtaArrow">→</span>
+            </div>
+          </div>
         </div>
       </article>
     </Link>

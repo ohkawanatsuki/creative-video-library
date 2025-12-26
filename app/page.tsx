@@ -17,9 +17,7 @@ function getParam(sp: SearchParams, key: string): string | undefined {
 }
 
 function uniqNonEmpty(values: (string | null)[]) {
-  return Array.from(
-    new Set(values.filter((v): v is string => !!v && v.trim().length > 0))
-  );
+  return Array.from(new Set(values.filter((v): v is string => !!v && v.trim().length > 0)));
 }
 
 function hasNull(values: (string | null)[]) {
@@ -42,16 +40,14 @@ export default async function Home({
 }: {
   searchParams: SearchParams | Promise<SearchParams>;
 }) {
-  // ✅ Next.js 16系の環境差で searchParams が Promise になるケースを吸収
   const sp = await Promise.resolve(searchParams as any);
 
-  const pvf = getParam(sp, "pvf"); // product_value_focus
-  const vmc = getParam(sp, "vmc"); // visual_main_character
-  const tone = getParam(sp, "tone"); // emotional_tone
+  const pvf = getParam(sp, "pvf");
+  const vmc = getParam(sp, "vmc");
+  const tone = getParam(sp, "tone");
 
   const hasFilter = !!(pvf || vmc || tone);
 
-  // フィルタ候補（structure_coreから集める）
   const { data: coreOptions, error: optErr } = await supabase
     .from("video_structure_core")
     .select("product_value_focus, visual_main_character, emotional_tone")
@@ -70,8 +66,6 @@ export default async function Home({
   const vmcHasNull = hasNull(vmcValues);
   const toneHasNull = hasNull(toneValues);
 
-  // 一覧取得（①②③）
-  // フィルタ時は inner join にして、条件が確実に効くようにする
   const structureSelect = hasFilter
     ? `video_structure_core!inner ( product_value_focus, visual_main_character, emotional_tone )`
     : `video_structure_core ( product_value_focus, visual_main_character, emotional_tone )`;
@@ -89,7 +83,6 @@ export default async function Home({
     .order("created_at", { ascending: false })
     .limit(50);
 
-  // ✅ 未入力（null）も絞り込めるようにする
   if (pvf) {
     q =
       pvf === NULL_SENTINEL
@@ -126,11 +119,31 @@ export default async function Home({
   const rows = (data ?? []) as VideoRow[];
 
   return (
-    <main style={{ padding: 40 }}>
+    <main className="container">
       <h1>Creative Library（仮）</h1>
-      <p>企画・提案のためのクリエイティブ参照ライブラリ。</p>
 
-      {/* ✅ フィルタUI（Client Component に移管：filter_used を送れる） */}
+      <div className="callout">
+        <div className="calloutTitle">まずは試してみてください</div>
+
+        <div className="calloutText">
+          企画・提案の参考になる動画クリエイティブを、
+          <strong>「見どころ一言」</strong>と
+          <strong>「切り口（価値・主役・トーン）」</strong>
+          で探せるライブラリです。
+        </div>
+
+        <div className="calloutSteps">
+          <div>
+            <b>①</b> 「条件で探す」で、気になる切り口（価値／主役／トーン）を1つ選んで
+            <b>「絞り込む」</b>
+          </div>
+          <div>
+            <b>②</b> 気になる動画を選んで、詳細をチェックしましょう
+          </div>
+          <div style={{ fontSize: 13, color: "#6b7280" }}>※まずは1つだけ選べばOKです。</div>
+        </div>
+      </div>
+
       {optErr ? (
         <section style={{ marginTop: 16 }}>
           <pre style={{ marginTop: 8, color: "red", whiteSpace: "pre-wrap" }}>
@@ -152,11 +165,9 @@ export default async function Home({
         />
       )}
 
-      {/* 一覧 */}
       <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
         {rows.map((v) => {
-          const hitokotoSummary =
-            v.video_core_summary?.[0]?.hitokoto_summary ?? null;
+          const hitokotoSummary = v.video_core_summary?.[0]?.hitokoto_summary ?? null;
           const core = v.video_structure_core?.[0];
 
           return (
